@@ -45,6 +45,7 @@ func resourceOpennebulaTemplate() *schema.Resource {
 			"memory":   memorySchema(),
 			"context":  contextSchema(),
 			"cpumodel": cpumodelSchema(),
+			"features": featuresSchema(),
 			"disk":     diskSchema(),
 			"graphics": graphicsSchema(),
 			"nic":      nicSchema(),
@@ -622,6 +623,17 @@ func generateTemplate(d *schema.ResourceData) (string, error) {
 	tpl := vm.NewTemplate()
 
 	tpl.Add(vmk.Name, name)
+
+	//Generate FEATURES definition
+	features := d.Get("features").(map[string]interface{})
+	log.Printf("Number of FEATURES vars: %d", len(features))
+	log.Printf("FEATURES Map: %s", features)
+
+	// Add new features elements to the template
+	for key, value := range features {
+		keyUp := strings.ToUpper(key)
+		tpl.AddFeature(vmk.Feature(keyUp), fmt.Sprint(value))
+	}
 
 	//Generate CONTEXT definition
 	context := d.Get("context").(map[string]interface{})

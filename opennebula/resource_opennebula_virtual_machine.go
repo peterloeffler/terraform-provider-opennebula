@@ -246,6 +246,10 @@ func diskComputedVMFields() map[string]*schema.Schema {
 			Type:     schema.TypeInt,
 			Computed: true,
 		},
+		"computed_dev_prefix": {
+			Type:     schema.TypeString,
+			Computed: true,
+		},
 		"computed_target": {
 			Type:     schema.TypeString,
 			Computed: true,
@@ -564,12 +568,14 @@ func flattenVMDiskComputed(diskConfig map[string]interface{}, disk shared.Disk) 
 func flattenDiskComputed(disk shared.Disk) map[string]interface{} {
 	size, _ := disk.GetI(shared.Size)
 	driver, _ := disk.Get(shared.Driver)
+	dev_prefix, _ := disk.Get(shared.DevPrefix)
 	target, _ := disk.Get(shared.TargetDisk)
 	diskID, _ := disk.GetI(shared.DiskID)
 
 	return map[string]interface{}{
 		"disk_id":         diskID,
 		"computed_size":   size,
+		"computed_dev_prefix": dev_prefix,
 		"computed_target": target,
 		"computed_driver": driver,
 	}
@@ -602,11 +608,13 @@ func matchDisk(diskConfig map[string]interface{}, disk shared.Disk) bool {
 
 	size, _ := disk.GetI(shared.Size)
 	driver, _ := disk.Get(shared.Driver)
+	dev_prefix, _ := disk.Get(shared.DevPrefix)
 	target, _ := disk.Get(shared.TargetDisk)
 	volatileType, _ := disk.Get("TYPE")
 	volatileFormat, _ := disk.Get("FORMAT")
 
 	return emptyOrEqual(diskConfig["target"], target) &&
+		emptyOrEqual(diskConfig["dev_prefix"], dev_prefix) &&
 		emptyOrEqual(diskConfig["size"], size) &&
 		emptyOrEqual(diskConfig["driver"], driver) &&
 		emptyOrEqual(diskConfig["volatile_type"], volatileType) &&
@@ -617,9 +625,11 @@ func matchDiskComputed(diskConfig map[string]interface{}, disk shared.Disk) bool
 
 	size, _ := disk.GetI(shared.Size)
 	driver, _ := disk.Get(shared.Driver)
+	dev_prefix, _ := disk.Get(shared.DevPrefix)
 	target, _ := disk.Get(shared.TargetDisk)
 
 	return (target == diskConfig["computed_target"].(string)) &&
+		(dev_prefix == diskConfig["computed_dev_prefix"].(string)) &&
 		(size == diskConfig["computed_size"].(int)) &&
 		(driver == diskConfig["computed_driver"].(string))
 
@@ -1119,6 +1129,7 @@ func resourceOpennebulaVirtualMachineUpdate(d *schema.ResourceData, meta interfa
 				Schema: diskFields(),
 			},
 			"image_id",
+			"dev_prefix",
 			"target",
 			"driver",
 			"volatile_type",
@@ -1135,6 +1146,7 @@ func resourceOpennebulaVirtualMachineUpdate(d *schema.ResourceData, meta interfa
 
 				// if disk have the same attributes
 				if (disk["target"] == newDisk["target"]) &&
+					disk["dev_prefix"] == newDisk["dev_prefix"] &&
 					disk["size"] == newDisk["size"] &&
 					disk["driver"] == newDisk["driver"] {
 
@@ -1212,6 +1224,7 @@ func resourceOpennebulaVirtualMachineUpdate(d *schema.ResourceData, meta interfa
 
 				cfg := d.(map[string]interface{})
 				if diskConfig["image_id"].(int) != cfg["image_id"].(int) ||
+					(len(diskConfig["dev_prefix"].(string)) > 0 && diskConfig["dev_prefix"] != cfg["computed_dev_prefix"]) ||
 					(len(diskConfig["target"].(string)) > 0 && diskConfig["target"] != cfg["computed_target"]) ||
 					(len(diskConfig["driver"].(string)) > 0 && diskConfig["driver"] != cfg["computed_driver"]) ||
 					diskConfig["size"].(int) <= cfg["computed_size"].(int) {

@@ -68,6 +68,14 @@ func nicSchema() *schema.Schema {
 	}
 }
 
+func featuresSchema() *schema.Schema {
+	return &schema.Schema{
+		Type:        schema.TypeMap,
+		Optional:    true,
+		Description: "Features variables",
+	}
+}
+
 func diskFields(customFields ...map[string]*schema.Schema) map[string]*schema.Schema {
 	return map[string]*schema.Schema{
 		"image_id": {
@@ -78,6 +86,10 @@ func diskFields(customFields ...map[string]*schema.Schema) map[string]*schema.Sc
 		},
 		"size": {
 			Type:     schema.TypeInt,
+			Optional: true,
+		},
+		"dev_prefix": {
+			Type:     schema.TypeString,
 			Optional: true,
 		},
 		"target": {
@@ -331,6 +343,8 @@ func makeDiskVector(diskConfig map[string]interface{}) *shared.Disk {
 		}
 
 		switch k {
+		case "dev_prefix":
+			disk.Add(shared.DevPrefix, v.(string))
 		case "target":
 			disk.Add(shared.TargetDisk, v.(string))
 		case "driver":
@@ -560,6 +574,7 @@ func flattenDisk(disk shared.Disk) map[string]interface{} {
 		size = 0
 	}
 	driver, _ := disk.Get(shared.Driver)
+	dev_prefix, _ := disk.Get(shared.DevPrefix)
 	target, _ := disk.Get(shared.TargetDisk)
 	imageID, _ := disk.GetI(shared.ImageID)
 	volatileType, _ := disk.Get("TYPE")
@@ -568,6 +583,7 @@ func flattenDisk(disk shared.Disk) map[string]interface{} {
 	return map[string]interface{}{
 		"image_id":        imageID,
 		"size":            size,
+		"dev_prefix":      dev_prefix,
 		"target":          target,
 		"driver":          driver,
 		"volatile_type":   volatileType,
