@@ -22,6 +22,7 @@ ENHANCEMENTS:
 * data/opennebula_virtual_network: make `name` optional and enable `tags` filtering
 * resources/opennebula_group: add `sunstone` and `tags` sections
 * resources/opennebula_virtual_network: compatibility added for network states
+* resources/opennebula_virtual_network: add `network_address` and `search_domain` attributes
 
 FEATURES:
 
