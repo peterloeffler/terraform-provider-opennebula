@@ -21,7 +21,8 @@ BUG FIXES:
 
 ENHANCEMENTS:
 
-resources/opennebula_virtual_machine: add `dev_prefix`, `cache`, `discard` and `io` to `disk`
+* resources/opennebula_virtual_machine: add `dev_prefix`, `cache`, `discard` and `io` to `disk`
+* resources/opennebula_virtual_network: add `network_address` and `search_domain` attributes
 
 ## 0.5.1 (July 4th, 2022)
 
