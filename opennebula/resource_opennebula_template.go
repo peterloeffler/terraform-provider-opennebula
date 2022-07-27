@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	"github.com/OpenNebula/one/src/oca/go/src/goca"
+	dyn "github.com/OpenNebula/one/src/oca/go/src/goca/dynamic"
 	"github.com/OpenNebula/one/src/oca/go/src/goca/parameters"
 	"github.com/OpenNebula/one/src/oca/go/src/goca/schemas/shared"
 	"github.com/OpenNebula/one/src/oca/go/src/goca/schemas/vm"
@@ -579,7 +580,26 @@ func resourceOpennebulaTemplateUpdate(d *schema.ResourceData, meta interface{}) 
 	}
 
 	update := false
-	newTpl := tpl.Template
+	newTpl := vm.NewTemplate()
+
+	// copy existing template and re-escape chars if needed
+	for _, e := range tpl.Template.Elements {
+		pair, ok := e.(*dyn.Pair)
+		if ok {
+			// copy a pair
+			escapedValue := strings.ReplaceAll(pair.Value, "\"", "\\\"")
+			newTpl.AddPair(e.Key(), escapedValue)
+		} else {
+			// copy a vector
+			vector, _ := e.(*dyn.Vector)
+
+			newVec := newTpl.AddVector(e.Key())
+			for _, p := range vector.Pairs {
+				escapedValue := strings.ReplaceAll(p.Value, "\"", "\\\"")
+				newVec.AddPair(p.Key(), escapedValue)
+			}
+		}
+	}
 
 	if d.HasChange("features") {
 		newTpl.Del("FEATURES")
@@ -619,7 +639,8 @@ func resourceOpennebulaTemplateUpdate(d *schema.ResourceData, meta interface{}) 
 		schedRequirements := d.Get("sched_requirements").(string)
 
 		if len(schedRequirements) > 0 {
-			newTpl.Placement(vmk.SchedRequirements, schedRequirements)
+			escapedValue := strings.ReplaceAll(schedRequirements, "\"", "\\\"")
+			newTpl.Placement(vmk.SchedRequirements, escapedValue)
 		} else {
 			newTpl.Del(string(vmk.SchedRequirements))
 		}
@@ -630,7 +651,8 @@ func resourceOpennebulaTemplateUpdate(d *schema.ResourceData, meta interface{}) 
 		schedDSRequirements := d.Get("sched_ds_requirements").(string)
 
 		if len(schedDSRequirements) > 0 {
-			newTpl.Placement(vmk.SchedDSRequirements, schedDSRequirements)
+			escapedValue := strings.ReplaceAll(schedDSRequirements, "\"", "\\\"")
+			newTpl.Placement(vmk.SchedDSRequirements, escapedValue)
 		} else {
 			newTpl.Del(string(vmk.SchedDSRequirements))
 		}

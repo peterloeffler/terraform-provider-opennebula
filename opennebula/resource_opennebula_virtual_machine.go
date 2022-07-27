@@ -272,6 +272,22 @@ func diskComputedVMFields() map[string]*schema.Schema {
 			Type:     schema.TypeString,
 			Computed: true,
 		},
+		"computed_dev_prefix": {
+			Type:     schema.TypeString,
+			Computed: true,
+		},
+		"computed_cache": {
+			Type:     schema.TypeString,
+			Computed: true,
+		},
+		"computed_discard": {
+			Type:     schema.TypeString,
+			Computed: true,
+		},
+		"computed_io": {
+			Type:     schema.TypeString,
+			Computed: true,
+		},
 	}
 }
 
@@ -578,6 +594,18 @@ func flattenVMDiskComputed(diskConfig map[string]interface{}, disk shared.Disk) 
 	if len(diskConfig["volatile_format"].(string)) > 0 {
 		diskMap["volatile_format"] = diskMap["computed_volatile_format"]
 	}
+	if len(diskConfig["dev_prefix"].(string)) > 0 {
+		diskMap["dev_prefix"] = diskMap["computed_dev_prefix"]
+	}
+	if len(diskConfig["cache"].(string)) > 0 {
+		diskMap["cache"] = diskMap["computed_cache"]
+	}
+	if len(diskConfig["discard"].(string)) > 0 {
+		diskMap["discard"] = diskMap["computed_discard"]
+	}
+	if len(diskConfig["io"].(string)) > 0 {
+		diskMap["io"] = diskMap["computed_io"]
+	}
 
 	return diskMap
 }
@@ -587,6 +615,10 @@ func flattenDiskComputed(disk shared.Disk) map[string]interface{} {
 	driver, _ := disk.Get(shared.Driver)
 	target, _ := disk.Get(shared.TargetDisk)
 	volatileFormat, _ := disk.Get("FORMAT")
+	dev_prefix, _ := disk.Get("DEV_PREFIX")
+	cache, _ := disk.Get("CACHE")
+	discard, _ := disk.Get("DISCARD")
+	io, _ := disk.Get("IO")
 	diskID, _ := disk.GetI(shared.DiskID)
 
 	return map[string]interface{}{
@@ -595,6 +627,10 @@ func flattenDiskComputed(disk shared.Disk) map[string]interface{} {
 		"computed_target":          target,
 		"computed_driver":          driver,
 		"computed_volatile_format": volatileFormat,
+		"computed_dev_prefix":      dev_prefix,
+		"computed_cache":           cache,
+		"computed_discard":         discard,
+		"computed_io":              io,
 	}
 }
 
@@ -626,12 +662,20 @@ func matchDisk(diskConfig map[string]interface{}, disk shared.Disk) bool {
 	size, _ := disk.GetI(shared.Size)
 	driver, _ := disk.Get(shared.Driver)
 	target, _ := disk.Get(shared.TargetDisk)
+	dev_prefix, _ := disk.Get("DEV_PREFIX")
+	cache, _ := disk.Get("CACHE")
+	discard, _ := disk.Get("DISCARD")
+	io, _ := disk.Get("IO")
 	volatileType, _ := disk.Get("TYPE")
 	volatileFormat, _ := disk.Get("FORMAT")
 
 	return emptyOrEqual(diskConfig["target"], target) &&
 		emptyOrEqual(diskConfig["size"], size) &&
 		emptyOrEqual(diskConfig["driver"], driver) &&
+		emptyOrEqual(diskConfig["dev_prefix"], dev_prefix) &&
+		emptyOrEqual(diskConfig["cache"], cache) &&
+		emptyOrEqual(diskConfig["discard"], discard) &&
+		emptyOrEqual(diskConfig["io"], io) &&
 		emptyOrEqual(diskConfig["volatile_type"], volatileType) &&
 		emptyOrEqual(diskConfig["volatile_format"], volatileFormat)
 }
@@ -642,12 +686,19 @@ func matchDiskComputed(diskConfig map[string]interface{}, disk shared.Disk) bool
 	driver, _ := disk.Get(shared.Driver)
 	target, _ := disk.Get(shared.TargetDisk)
 	format, _ := disk.Get("FORMAT")
+	dev_prefix, _ := disk.Get("DEV_PREFIX")
+	cache, _ := disk.Get("CACHE")
+	discard, _ := disk.Get("DISCARD")
+	io, _ := disk.Get("IO")
 
 	return (target == diskConfig["computed_target"].(string)) &&
 		(size == diskConfig["computed_size"].(int)) &&
 		(driver == diskConfig["computed_driver"].(string)) &&
-		(format == diskConfig["computed_volatile_format"].(string))
-
+		(format == diskConfig["computed_volatile_format"].(string)) &&
+		(dev_prefix == diskConfig["computed_dev_prefix"].(string)) &&
+		(cache == diskConfig["computed_cache"].(string)) &&
+		(discard == diskConfig["computed_discard"].(string)) &&
+		(io == diskConfig["computed_io"].(string))
 }
 
 // flattenVMDisk is similar to flattenDisk but deal with computed_* attributes
@@ -1113,6 +1164,10 @@ func resourceOpennebulaVirtualMachineUpdate(d *schema.ResourceData, meta interfa
 			"image_id",
 			"target",
 			"driver",
+			"dev_prefix",
+			"cache",
+			"discard",
+			"io",
 			"volatile_type",
 			"volatile_format")
 
@@ -1128,7 +1183,11 @@ func resourceOpennebulaVirtualMachineUpdate(d *schema.ResourceData, meta interfa
 				// if disk have the same attributes
 				if (disk["target"] == newDisk["target"]) &&
 					disk["size"] == newDisk["size"] &&
-					disk["driver"] == newDisk["driver"] {
+					disk["driver"] == newDisk["driver"] &&
+					disk["dev_prefix"] == newDisk["dev_prefix"] &&
+					disk["cache"] == newDisk["cache"] &&
+					disk["discard"] == newDisk["discard"] &&
+					disk["io"] == newDisk["io"] {
 
 					newDisktoAttach[i] = disk
 					i++
@@ -1206,6 +1265,10 @@ func resourceOpennebulaVirtualMachineUpdate(d *schema.ResourceData, meta interfa
 				if diskConfig["image_id"].(int) != cfg["image_id"].(int) ||
 					(len(diskConfig["target"].(string)) > 0 && diskConfig["target"] != cfg["computed_target"]) ||
 					(len(diskConfig["driver"].(string)) > 0 && diskConfig["driver"] != cfg["computed_driver"]) ||
+					(len(diskConfig["dev_prefix"].(string)) > 0 && diskConfig["dev_prefix"] != cfg["computed_dev_prefix"]) ||
+					(len(diskConfig["cache"].(string)) > 0 && diskConfig["cache"] != cfg["computed_cache"]) ||
+					(len(diskConfig["discard"].(string)) > 0 && diskConfig["discard"] != cfg["computed_discard"]) ||
+					(len(diskConfig["io"].(string)) > 0 && diskConfig["io"] != cfg["computed_io"]) ||
 					diskConfig["size"].(int) <= cfg["computed_size"].(int) {
 
 					continue
@@ -1457,7 +1520,7 @@ func resourceOpennebulaVirtualMachineUpdate(d *schema.ResourceData, meta interfa
 						continue
 					}
 
-					contextVec.AddPair(keyUp, value)
+					contextVec.AddPair(keyUp, strings.ReplaceAll(fmt.Sprint(value), "\\n", "\n"))
 				}
 
 			} else {
@@ -1694,7 +1757,7 @@ func generateVm(d *schema.ResourceData, tplContext *dyn.Vector) (string, error) 
 		for key, value := range context {
 			keyUp := strings.ToUpper(key)
 			tplContext.Del(keyUp)
-			tplContext.AddPair(keyUp, value)
+			tplContext.AddPair(keyUp, strings.ReplaceAll(fmt.Sprint(value), "\\n", "\n"))
 		}
 
 		tpl.Elements = append(tpl.Elements, tplContext)
@@ -1703,7 +1766,7 @@ func generateVm(d *schema.ResourceData, tplContext *dyn.Vector) (string, error) 
 		// Add new context elements to the template
 		for key, value := range context {
 			keyUp := strings.ToUpper(key)
-			tpl.AddCtx(vmk.Context(keyUp), fmt.Sprint(value))
+			tpl.AddCtx(vmk.Context(keyUp), strings.ReplaceAll(fmt.Sprint(value), "\\n", "\n"))
 		}
 	}
 
@@ -1740,6 +1803,10 @@ func resourceVMCustomizeDiff(ctx context.Context, diff *schema.ResourceDiff, v i
 				diff.ForceNew(fmt.Sprintf("disk.%d.image_id", i))
 				diff.ForceNew(fmt.Sprintf("disk.%d.target", i))
 				diff.ForceNew(fmt.Sprintf("disk.%d.driver", i))
+				diff.ForceNew(fmt.Sprintf("disk.%d.dev_prefix", i))
+				diff.ForceNew(fmt.Sprintf("disk.%d.cache", i))
+				diff.ForceNew(fmt.Sprintf("disk.%d.discard", i))
+				diff.ForceNew(fmt.Sprintf("disk.%d.io", i))
 			}
 		}
 	}
