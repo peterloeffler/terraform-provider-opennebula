@@ -19,6 +19,10 @@ BUG FIXES:
 * resources/opennebula_virtual_router: read tags even if emtpy (#304)
 * data/opennebula_virtual_network: MTU is optional (#284)
 
+ENHANCEMENTS:
+
+resources/opennebula_virtual_machine: add `dev_prefix`, `cache`, `discard` and `io` to `disk`
+
 ## 0.5.1 (July 4th, 2022)
 
 ENHANCEMENTS:
